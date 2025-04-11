@@ -32,31 +32,33 @@ if uploaded_file is not None:
                 "tipo documento": "tipo",
                 "documento": "documento",
                 "endereco": "endereco",
-                "sobrenome": "sobrenome",  # 🔧 novo campo
-                "email": "email",          # 🔧 novo campo
-                "telefone_1": "telefone_1" # 🔧 novo campo
+                "sobrenome": "sobrenome",
+                "nome": "nome",
+                "email": "email",
+                "telefone_1": "telefone_1"
             }, inplace=True)
 
             empresas = df.groupby("apelido")
 
-            for nome, grupo in empresas:
-                if pd.isna(nome):
+            for nome_apelido, grupo in empresas:
+                if pd.isna(nome_apelido):
                     continue
 
-                texto = ""
                 mlbs = grupo["itemid"].dropna().astype(str).tolist()
-                if mlbs:
-                    texto += f"{', '.join(mlbs)}\n"
+                if not mlbs:
+                    continue  # pula se não tiver itemid válido
 
-                texto += f"Nome: {nome}\n"
+                texto = f"{', '.join(mlbs)}\n"
+                texto += f"Nome: {nome_apelido}\n"
 
-                # 🔧 Nome/Razão social
-                if "sobrenome" in grupo.columns:
-                    sobrenome = grupo["sobrenome"].dropna().astype(str).iloc[0] if not grupo["sobrenome"].dropna().empty else None
-                    if sobrenome:
-                        texto += f"Nome/Razão social: {sobrenome}\n"
+                # Nome/Razão social = nome + sobrenome
+                nome_valor = grupo["nome"].dropna().astype(str).iloc[0] if "nome" in grupo.columns and not grupo["nome"].dropna().empty else ""
+                sobrenome_valor = grupo["sobrenome"].dropna().astype(str).iloc[0] if "sobrenome" in grupo.columns and not grupo["sobrenome"].dropna().empty else ""
+                if nome_valor or sobrenome_valor:
+                    nome_completo = f"{nome_valor} {sobrenome_valor}".strip()
+                    texto += f"Nome/Razão social: {nome_completo}\n"
 
-                # 🔧 Tipo Documento
+                # Documento (CNPJ/CPF)
                 if "tipo" in grupo.columns and "documento" in grupo.columns:
                     tipo = grupo["tipo"].dropna().astype(str).str.lower().iloc[0] if not grupo["tipo"].dropna().empty else None
                     documento = grupo["documento"].dropna().astype(str).iloc[0] if not grupo["documento"].dropna().empty else None
@@ -64,19 +66,16 @@ if uploaded_file is not None:
                         tipo_str = "CNPJ" if "cnpj" in tipo else ("CPF" if "cpf" in tipo else tipo.upper())
                         texto += f"{tipo_str}: {documento}\n"
 
-                # 🔧 Email
                 if "email" in grupo.columns:
                     email = grupo["email"].dropna().astype(str).iloc[0] if not grupo["email"].dropna().empty else None
                     if email:
                         texto += f"E-mail: {email}\n"
 
-                # Endereço
                 if "endereco" in grupo.columns:
                     end = grupo["endereco"].dropna().astype(str).iloc[0] if not grupo["endereco"].dropna().empty else None
                     if end:
                         texto += f"Endereço: {end}\n"
 
-                # 🔧 Telefone
                 if "telefone_1" in grupo.columns:
                     tel = grupo["telefone_1"].dropna().astype(str).iloc[0] if not grupo["telefone_1"].dropna().empty else None
                     if tel:
